@@ -29,9 +29,19 @@ router.post(
   ]),
   async (req, res) => {
     try {
-      const { fullName, email, password, number, age, address, role } = req.body;
+      const {
+        fullName,
+        email,
+        password,
+        number,
+        age,
+        address,
+        gender,     // Added
+        role,
+        serviceType
+      } = req.body;
 
-      if (!fullName || !email || !password) {
+      if (!fullName || !email || !password || !gender || !role) {
         return res.status(400).json({ message: 'Missing required fields' });
       }
 
@@ -39,28 +49,52 @@ router.post(
         return res.status(400).json({ message: 'Files missing' });
       }
 
+      if (role === 'vendor' && !serviceType) {
+        return res.status(400).json({
+          message: 'Service type required for service provider'
+        });
+      }
+
       const hashedPassword = await bcrypt.hash(password, 10);
 
-      const user = await User.create({
+      const userData = {
         name: fullName,
         email,
         password: hashedPassword,
         number,
         age,
         address,
+        gender,       // Added
         role,
         aadhaarPath: req.files.aadhaar[0].path,
         profilePhotoPath: req.files.profilePhoto[0].path
-      });
+      };
+
+      if (role === 'vendor') {
+        userData.serviceType = serviceType;
+      }
+
+      await User.create(userData);
 
       res.status(201).json({ message: 'Registered successfully' });
 
     } catch (error) {
       console.error(error);
-      res.status(500).json({ message: 'Server error', error: error.message });
+      res.status(500).json({ message: 'Server error' });
     }
   }
 );
+
+// Get vendors
+router.get('/vendors', async (req, res) => {
+  try {
+    const vendors = await User.find({ role: 'vendor' });
+    res.status(200).json(vendors);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
 
 // LOGIN
 router.post('/login', async (req, res) => {
