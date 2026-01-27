@@ -8,57 +8,15 @@ const cors = require('cors');
 const path = require('path');
 const bodyParser = require('body-parser');
 
-// Import booking routes
-const bookingRoutes = require('./routes/bookings');
-
-// Routes
-const authRoutes = require('./routes/auth');
-const memberRoutes = require('./routes/member');
-
-// ========================
-// CONFIG
-// ========================
 dotenv.config();
 const app = express();
 const PORT = process.env.PORT || 3000;
 
 // ========================
-// SOCKET.IO SETUP
-// ========================
-const http = require('http').createServer(app);
-const io = require('socket.io')(http, {
-  cors: { origin: '*' }
-});
-
-// In-memory vendor status store
-// You can later move this to MongoDB if needed
-let vendorStatusStore = {}; // { vendorId: 'available' | 'busy' }
-
-// Socket connection
-io.on('connection', (socket) => {
-  console.log('New client connected:', socket.id);
-
-  // Listen for vendor status updates
-  socket.on('vendor-status-update', (data) => {
-    console.log('Status update received:', data);
-
-    // Save status in memory
-    vendorStatusStore[data.vendorId] = data.status;
-
-    // Broadcast to all clients
-    io.emit('vendor-status-changed', data);
-  });
-
-  socket.on('disconnect', () => {
-    console.log('Client disconnected:', socket.id);
-  });
-});
-
-// ========================
 // MIDDLEWARE
 // ========================
 app.use(cors());
-app.use(express.json()); // Parse JSON bodies
+app.use(express.json());
 app.use(bodyParser.json());
 
 // Serve static files (uploads)
@@ -72,39 +30,58 @@ mongoose.connect(process.env.MONGO_URI)
   .catch(err => console.error('MongoDB connection error:', err));
 
 // ========================
+// MODELS
+// ========================
+const User = require('./model/user');
+const Booking = require('./model/booking'); // optional, can define inline
+
+// ========================
 // ROUTES
 // ========================
-app.use('/api', authRoutes);
-app.use('/api/member', memberRoutes);
-
-// Use booking routes for /api/bookings
-app.use('/api/bookings', bookingRoutes);
-
-// ========================
-// STATUS API (Optional but useful)
-// ========================
-
+const authRoutes = require('./routes/auth');
+const bookingRoutes = require('./routes/bookings');
+const memberRoutes = require('./routes/member');
 const vendorRoutes = require('./routes/vendor');
+
+app.use('/api', authRoutes);
+app.use('/api/bookings', bookingRoutes);
+app.use('/api/member', memberRoutes);
 app.use('/api/vendor', vendorRoutes);
-app.get('/api/vendor/status/:vendorId', (req, res) => {
-  const vendorId = req.params.vendorId;
-  const status = vendorStatusStore[vendorId] || 'available';
-  res.json({ vendorId, status });
+
+// ========================
+// VENDOR STATUS API (MongoDB-based)
+// ========================
+
+// GET vendor status
+app.get('/api/vendor/status/:vendorId', async (req, res) => {
+  try {
+    const vendor = await User.findById(req.params.vendorId);
+    if (!vendor) return res.status(404).json({ message: 'Vendor not found' });
+    res.json({ vendorId: vendor._id, status: vendor.status });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
-app.post('/api/vendor/status', (req, res) => {
-  const { vendorId, status } = req.body;
-  vendorStatusStore[vendorId] = status;
-
-  // Broadcast status change
-  io.emit('vendor-status-changed', { vendorId, status });
-
-  res.json({ success: true, vendorId, status });
+// SET vendor status
+app.post('/api/vendor/status', async (req, res) => {
+  try {
+    const { vendorId, status } = req.body;
+    const vendor = await User.findByIdAndUpdate(
+      vendorId,
+      { status },
+      { new: true }
+    );
+    if (!vendor) return res.status(404).json({ message: 'Vendor not found' });
+    res.json({ vendorId: vendor._id, status: vendor.status });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 // ========================
 // START SERVER
 // ========================
-http.listen(PORT, () => {
+app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
 });

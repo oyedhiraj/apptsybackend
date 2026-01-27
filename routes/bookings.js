@@ -1,71 +1,85 @@
-// routes/bookings.js
 const express = require('express');
 const router = express.Router();
-const mongoose = require('mongoose');
-const twilioClient = require('../config/twilio');
+const Booking = require('../model/booking');
+const User = require('../model/user'); // 👈 IMPORTANT
+const auth = require('../middleware/authmiddleware');
 
-// Booking Schema
-const bookingSchema = new mongoose.Schema({
-  customerName: String,
-  customerPhone: String,
-  serviceType: String,
-  slotTime: Date,
-  vendorId: String,
-  location:String,
-  status: { type: String, default: 'pending' }
-});
-
-const Booking = mongoose.model('Booking', bookingSchema);
-
-// POST /api/bookings - create a booking
-router.post('/', async (req, res) => {
+/**
+ * CUSTOMER → CREATE BOOKING
+ */
+router.post('/', auth, async (req, res) => {
   try {
-    const booking = new Booking(req.body);
-    await booking.save();
-    res.json({ message: 'Booking created', booking });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
+    const { vendorId, serviceType, slotTime, location } = req.body;
 
-// GET /api/bookings/vendor/:vendorId - get bookings for vendor
-router.get('/vendor/:vendorId', async (req, res) => {
-  try {
-    const bookings = await Booking.find({ vendorId: req.params.vendorId });
-    res.json(bookings);
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
+    if (!vendorId) {
+      return res.status(400).json({ message: 'Vendor ID required' });
+    }
 
-// PUT /api/bookings/:id/confirm - confirm booking
+    // ✅ Get logged-in customer from DB
+    const customer = await User.findById(req.user.userId);
 
-router.put('/:id/confirm', async (req, res) => {
-  try {
-    const booking = await Booking.findByIdAndUpdate(
-      req.params.id,
-      { status: 'confirmed' },
-      { new: true }
-    );
+    if (!customer) {
+      return res.status(404).json({ message: 'Customer not found' });
+    }
 
-    // 📞 CALL CUSTOMER
-    await twilioClient.calls.create({
-      to: booking.customerPhone,
-      from: process.env.TWILIO_PHONE_NUMBER,
-      twiml: `
-        <Response>
-          <Say voice="alice">
-            Hello ${booking.customerName}.
-            Your service booking for ${booking.serviceType}
-            has been confirmed. The vendor will contact you shortly.
-          </Say>
-        </Response>
-      `
+    const booking = await Booking.create({
+      vendorId,
+      serviceType,
+      slotTime,
+      location,
+
+      customerId: customer._id,
+      customerName: customer.name,
+      customerPhone: customer.number
     });
 
-    res.json({ message: 'Booking confirmed & call triggered', booking });
+    res.status(201).json(booking);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    console.error('BOOKING ERROR:', err);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+});
+
+/**
+ * VENDOR → GET OWN BOOKINGS
+ */
+router.get('/vendor/:vendorId', auth, async (req, res) => {
+  try {
+    if (req.user.userId !== req.params.vendorId) {
+      return res.status(403).json({ message: 'Unauthorized' });
+    }
+
+    const bookings = await Booking.find({
+      vendorId: req.params.vendorId
+    }).sort({ createdAt: -1 });
+
+    res.json(bookings);
+  } catch (err) {
+    res.status(500).json({ message: 'Internal server error' });
+  }
+});
+
+/**
+ * VENDOR → CONFIRM BOOKING
+ */
+router.put('/:id/confirm', auth, async (req, res) => {
+  try {
+    const booking = await Booking.findById(req.params.id);
+
+    if (!booking) {
+      return res.status(404).json({ message: 'Booking not found' });
+    }
+
+    if (booking.vendorId.toString() !== req.user.userId) {
+      return res.status(403).json({ message: 'Unauthorized' });
+    }
+
+    booking.status = 'confirmed';
+    await booking.save();
+
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ message: 'Internal server error' });
   }
 });
 
