@@ -1,12 +1,11 @@
-// ========================
-// IMPORTS
-// ========================
 const express = require('express');
 const mongoose = require('mongoose');
 const dotenv = require('dotenv');
 const cors = require('cors');
 const path = require('path');
 const bodyParser = require('body-parser');
+const swaggerUi = require('swagger-ui-express');
+const swaggerSpec = require('./swagger');
 
 dotenv.config();
 const app = express();
@@ -21,6 +20,15 @@ app.use(bodyParser.json());
 
 // Serve static files (uploads)
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+
+// ========================
+// SWAGGER DOCUMENTATION
+// ========================
+app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec, {
+  swaggerOptions: {
+    persistAuthorization: true
+  }
+}));
 
 // ========================
 // DATABASE CONNECTION
