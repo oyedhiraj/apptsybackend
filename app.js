@@ -50,11 +50,13 @@ const authRoutes = require('./routes/auth');
 const bookingRoutes = require('./routes/bookings');
 const memberRoutes = require('./routes/member');
 const vendorRoutes = require('./routes/vendor');
+const notificationRoutes = require('./routes/firebasenotification');
 
 app.use('/api', authRoutes);
 app.use('/api/bookings', bookingRoutes);
 app.use('/api/member', memberRoutes);
 app.use('/api/vendor', vendorRoutes);
+app.use('/api/notify', notificationRoutes);
 
 // ========================
 // VENDOR STATUS API (MongoDB-based)
