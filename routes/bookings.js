@@ -12,60 +12,68 @@ router.post('/', auth, async (req, res) => {
   try {
     const { vendorId, serviceType, slotTime, location } = req.body;
 
-    // ✅ Validate all fields
+    // 1️⃣ Validate input
     if (!vendorId || !serviceType || !slotTime || !location) {
       return res.status(400).json({ message: 'All fields are required' });
     }
 
-    // ✅ Get logged-in customer
+    // 2️⃣ Get logged-in customer
     const customer = await User.findById(req.user.userId);
     if (!customer) {
       return res.status(404).json({ message: 'Customer not found' });
     }
 
-    // ✅ Check vendor exists
+    // 3️⃣ Get vendor
     const vendor = await User.findById(vendorId);
     if (!vendor || vendor.role !== 'vendor') {
       return res.status(404).json({ message: 'Vendor not found' });
     }
 
-    // ✅ Prevent double booking
+    // 4️⃣ Prevent double booking
     const existingBooking = await Booking.findOne({
       vendorId,
       slotTime,
       status: { $in: ['pending', 'confirmed'] }
     });
-
     if (existingBooking) {
       return res.status(400).json({ message: 'Slot already booked' });
     }
 
+    // 5️⃣ Create booking
     const booking = await Booking.create({
       vendorId,
-      serviceType,
-      slotTime,
-      location,
       customerId: customer._id,
       customerName: customer.name,
-      customerPhone: customer.number,
+      customerPhone: customer.number, // matches your schema
+      serviceType,
+      slotTime: new Date(slotTime),
+      location,
       status: 'pending'
     });
 
-    // 🔥 Send SMS to vendor (non-blocking)
-    sendSMS(
-      vendor.number,
-      `📢 New Booking Request
+    // 6️⃣ Send SMS safely
+    try {
+      if (vendor.number && process.env.TWILIO_ACCOUNT_SID && process.env.TWILIO_AUTH_TOKEN && process.env.TWILIO_PHONE_NUMBER) {
+        await sendSMS(
+          vendor.number,
+          `📢 New Booking Request
 Customer: ${customer.name}
 Service: ${serviceType}
 Time: ${new Date(slotTime).toLocaleString()}
 Location: ${location}`
-    ).catch(err => console.log(err));
+        );
+      } else {
+        console.warn('Twilio not configured or vendor number missing');
+      }
+    } catch (smsErr) {
+      console.error('Twilio SMS error:', smsErr.message);
+    }
 
     res.status(201).json(booking);
 
   } catch (err) {
     console.error('BOOKING ERROR:', err);
-    res.status(500).json({ message: 'Internal server error' });
+    res.status(500).json({ message: 'Internal server error', error: err.message });
   }
 });
 
