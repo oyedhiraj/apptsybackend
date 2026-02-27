@@ -5,7 +5,8 @@ const bookingSchema = new mongoose.Schema(
     vendorId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'User',
-      required: true
+      required: true,
+      index: true
     },
 
     customerId: {
@@ -14,12 +15,33 @@ const bookingSchema = new mongoose.Schema(
       required: true
     },
 
-    customerName: String,
-    customerPhone: String,
+    customerName: {
+      type: String,
+      required: true,
+      trim: true
+    },
 
-    serviceType: String,
-    slotTime: Date,
-    location: String,
+    customerPhone: {
+      type: String,
+      required: true
+    },
+
+    serviceType: {
+      type: String,
+      required: true,
+      trim: true
+    },
+
+    slotTime: {
+      type: Date,
+      required: true
+    },
+
+    location: {
+      type: String,
+      required: true,
+      trim: true
+    },
 
     status: {
       type: String,
@@ -29,5 +51,7 @@ const bookingSchema = new mongoose.Schema(
   },
   { timestamps: true }
 );
+
+bookingSchema.index({ vendorId: 1, slotTime: 1 });
 
 module.exports = mongoose.model('Booking', bookingSchema);
