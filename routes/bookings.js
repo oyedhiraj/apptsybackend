@@ -18,7 +18,8 @@ router.post('/', auth, async (req, res) => {
     }
 
     // ✅ Get logged-in customer
-    const customer = await User.findById(req.user.userId);
+    const customer = await User.findById(req.user.id);
+    
     if (!customer) {
       return res.status(404).json({ message: 'Customer not found' });
     }
