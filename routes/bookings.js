@@ -3,7 +3,7 @@ const router = express.Router();
 const Booking = require('../model/booking');
 const User = require('../model/user');
 const auth = require('../middleware/authmiddleware');
-const sendSMS = require('../utils/twilio'); // 🔥 Twilio helper
+const sendSMS = require('../config/twilio');
 
 /**
  * CUSTOMER → CREATE BOOKING
@@ -114,10 +114,10 @@ router.put('/:id/confirm', auth, async (req, res) => {
     // 🔥 Notify customer
     sendSMS(
       booking.customerPhone,
-      `✅ Booking Confirmed
-Service: ${booking.serviceType}
-Time: ${booking.slotTime.toLocaleString()}
-Location: ${booking.location}`
+       `✅ Booking Confirmed
+        Service: ${booking.serviceType}
+       Time: ${booking.slotTime.toLocaleString()}
+       Location: ${booking.location}`
     ).catch(err => console.log(err));
 
     res.json({ success: true });
