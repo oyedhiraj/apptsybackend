@@ -107,30 +107,34 @@ router.put('/:id/confirm', auth, async (req, res) => {
       return res.status(404).json({ message: 'Booking not found' });
     }
 
-    if (booking.vendorId.toString() !== req.user.userId) {
+    if (String(booking.vendorId) !== String(req.user.userId)) {
       return res.status(403).json({ message: 'Unauthorized' });
-    }
-
-    if (booking.status === 'confirmed') {
-      return res.status(400).json({ message: 'Already confirmed' });
     }
 
     booking.status = 'confirmed';
     await booking.save();
 
-    sendSMS(
-      booking.customerPhone,
-      `✅ Booking Confirmed
-Service: ${booking.serviceType}
-Time: ${booking.slotTime.toLocaleString()}
-Location: ${booking.location}`
-    ).catch(err => console.log(err));
+    const time = new Date(booking.slotTime).toLocaleString();
 
-    res.json({ success: true });
+    try {
+      if (booking.customerPhone) {
+        await sendSMS(
+          booking.customerPhone,
+          `✅ Booking Confirmed
+            Service: ${booking.serviceType}
+            Time: ${time}
+            Location: ${booking.location}`
+        );
+      }
+    } catch (smsErr) {
+      console.log("SMS error:", smsErr.message);
+    }
+
+    res.json({ message: "Booking confirmed", booking });
 
   } catch (err) {
-    console.error('CONFIRM ERROR:', err);
-    res.status(500).json({ message: 'Internal server error' });
+    console.error("CONFIRM ERROR:", err);
+    res.status(500).json({ message: "Internal server error" });
   }
 });
 
@@ -147,30 +151,34 @@ router.put('/:id/cancel', auth, async (req, res) => {
       return res.status(404).json({ message: 'Booking not found' });
     }
 
-    if (booking.vendorId.toString() !== req.user.userId) {
+    if (String(booking.vendorId) !== String(req.user.userId)) {
       return res.status(403).json({ message: 'Unauthorized' });
-    }
-
-    if (booking.status === 'cancelled') {
-      return res.status(400).json({ message: 'Already cancelled' });
     }
 
     booking.status = 'cancelled';
     await booking.save();
 
-    sendSMS(
-      booking.customerPhone,
-      `❌ Booking Cancelled
-Service: ${booking.serviceType}
-Time: ${booking.slotTime.toLocaleString()}
-Location: ${booking.location}`
-    ).catch(err => console.log(err));
+    const time = new Date(booking.slotTime).toLocaleString();
 
-    res.json({ success: true });
+    try {
+      if (booking.customerPhone) {
+        await sendSMS(
+          booking.customerPhone,
+          `❌ Booking Cancelled
+            Service: ${booking.serviceType}
+            Time: ${time}
+            Location: ${booking.location}`
+        );
+      }
+    } catch (smsErr) {
+      console.log("SMS error:", smsErr.message);
+    }
+
+    res.json({ message: "Booking cancelled", booking });
 
   } catch (err) {
-    console.error('CANCEL ERROR:', err);
-    res.status(500).json({ message: 'Internal server error' });
+    console.error("CANCEL ERROR:", err);
+    res.status(500).json({ message: "Internal server error" });
   }
 });
 
