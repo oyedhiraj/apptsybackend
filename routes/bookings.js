@@ -79,21 +79,21 @@ Location: ${location}`
 /**
  * VENDOR → GET OWN BOOKINGS
  */
-router.get('/vendor/:vendorId', auth, async (req, res) => {
+ router.get("/vendor/:vendorId", async (req, res) => {
   try {
+
+    res.set("Cache-Control", "no-store");
 
     const bookings = await Booking.find({
       vendorId: req.params.vendorId
-    }).sort({ createdAt: -1 });
+    });
 
-    res.json(bookings);
+    res.status(200).json(bookings);
 
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ message: 'Internal server error' });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
   }
 });
-
 
 /**
  * VENDOR → CONFIRM BOOKING
