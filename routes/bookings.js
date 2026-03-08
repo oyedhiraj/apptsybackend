@@ -82,16 +82,15 @@ Location: ${location}`
  * VENDOR → GET OWN BOOKINGS
  * (Safer version without param misuse)
  */
-router.get('/vendor/bookings', auth, async (req, res) => {
+router.get('/vendor/:vendorId', auth, async (req, res) => {
   try {
     const bookings = await Booking.find({
-      vendorId: req.user.userId
+      vendorId: req.params.vendorId
     }).sort({ createdAt: -1 });
 
     res.json(bookings);
-
   } catch (err) {
-    console.error('FETCH ERROR:', err);
+    console.error(err);
     res.status(500).json({ message: 'Internal server error' });
   }
 });
