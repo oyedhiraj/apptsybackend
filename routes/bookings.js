@@ -86,11 +86,14 @@ Location: ${location}`
 
     const bookings = await Booking.find({
       vendorId: req.params.vendorId
-    });
+    }).sort({ createdAt: -1 });
+
+    console.log("Bookings Found:", bookings.length);
 
     res.status(200).json(bookings);
 
   } catch (error) {
+    console.error(error);
     res.status(500).json({ message: error.message });
   }
 });
