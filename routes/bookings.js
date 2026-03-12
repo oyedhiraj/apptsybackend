@@ -86,12 +86,13 @@ router.get("/user/:userId", async (req, res) => {
     const bookings = await Booking.find({
       customerId: req.params.userId
     })
-    .populate("vendorId", "name phone")   // fetch vendor name
+    .populate("vendorId")   // fetch all vendor details
     .sort({ createdAt: -1 });
 
     res.json(bookings);
 
   } catch (error) {
+    console.error(error);
     res.status(500).json({ message: error.message });
   }
 });
