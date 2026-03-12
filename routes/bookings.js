@@ -4,6 +4,7 @@ const Booking = require('../model/booking');
 const User = require('../model/user');
 const auth = require('../middleware/authmiddleware');
 const sendSMS = require('../config/twilio');
+const mongoose = require("mongoose");
 
 /**
  * CUSTOMER → CREATE BOOKING
@@ -79,18 +80,16 @@ Location: ${location}`
 /**
  * VENDOR → GET OWN BOOKINGS
  */
- router.get("/vendor/:vendorId", async (req, res) => {
+router.get("/user/:userId", async (req, res) => {
   try {
 
-    res.set("Cache-Control", "no-store");
-
     const bookings = await Booking.find({
-      vendorId: req.params.vendorId
+      customerId: new mongoose.Types.ObjectId(req.params.userId)
     }).sort({ createdAt: -1 });
 
-    console.log("Bookings Found:", bookings.length);
+    console.log("Bookings found:", bookings.length);
 
-    res.status(200).json(bookings);
+    res.json(bookings);
 
   } catch (error) {
     console.error(error);
