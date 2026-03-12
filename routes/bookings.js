@@ -99,6 +99,27 @@ Location: ${location}`
 });
 
 /**
+ * CUSTOMER → GET OWN BOOKINGS
+ */
+router.get("/user/:userId", async (req, res) => {
+  try {
+
+    res.set("Cache-Control", "no-store");
+
+    const bookings = await Booking.find({
+      userId: req.params.userId
+    }).sort({ createdAt: -1 });
+
+    console.log("Customer Bookings Found:", bookings.length);
+
+    res.status(200).json(bookings);
+
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: error.message });
+  }
+});
+/**
  * VENDOR → CONFIRM BOOKING
  */
 router.put('/:id/confirm', auth, async (req, res) => {
