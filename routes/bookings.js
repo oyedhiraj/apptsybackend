@@ -84,15 +84,14 @@ router.get("/user/:userId", async (req, res) => {
   try {
 
     const bookings = await Booking.find({
-      customerId: new mongoose.Types.ObjectId(req.params.userId)
-    }).sort({ createdAt: -1 });
-
-    console.log("Bookings found:", bookings.length);
+      customerId: req.params.userId
+    })
+    .populate("vendorId", "name phone")   // fetch vendor name
+    .sort({ createdAt: -1 });
 
     res.json(bookings);
 
   } catch (error) {
-    console.error(error);
     res.status(500).json({ message: error.message });
   }
 });
