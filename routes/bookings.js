@@ -80,11 +80,11 @@ Location: ${location}`
 /**
  * VENDOR → GET OWN BOOKINGS
  */
-router.get("/user/:userId", async (req, res) => {
+router.get("/vendor/:vendorId", async (req, res) => {
   try {
 
     const bookings = await Booking.find({
-      customerId: req.params.userId
+      vendorId: req.params.vendorId
     })
     .populate("vendorId")   // fetch all vendor details
     .sort({ createdAt: -1 });
