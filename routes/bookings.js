@@ -106,7 +106,7 @@ router.get("/user/:userId", async (req, res) => {
     res.set("Cache-Control", "no-store");
 
     const bookings = await Booking.find({
-      userId: req.params.userId
+      customerId: req.params.userId
     }).sort({ createdAt: -1 });
 
     console.log("Customer Bookings Found:", bookings.length);
