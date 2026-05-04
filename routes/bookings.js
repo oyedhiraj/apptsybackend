@@ -107,7 +107,9 @@ router.get("/user/:userId", async (req, res) => {
 
     const bookings = await Booking.find({
       customerId: req.params.userId
-    }).sort({ createdAt: -1 });
+    })
+    .populate("vendorId", "name number role")
+    .sort({ createdAt: -1 });
 
     console.log("Customer Bookings Found:", bookings.length);
 
