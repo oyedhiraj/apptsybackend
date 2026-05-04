@@ -21,6 +21,23 @@ const bookingSchema = new mongoose.Schema(
       trim: true
     },
 
+    feedback: {
+      rating: {
+        type: Number,
+        default: 0
+      },
+
+      comment: {
+        type: String,
+        default: ""
+      },
+
+      given: {
+        type: Boolean,
+        default: false
+      }
+    },
+
     customerPhone: {
       type: String,
       required: true

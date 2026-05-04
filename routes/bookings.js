@@ -207,5 +207,46 @@ router.put('/:id/cancel', auth, async (req, res) => {
   }
 });
 
+router.put("/:id/feedback", auth, async (req, res) => {
+  try {
+
+    const { rating, comment } = req.body;
+
+    const booking = await Booking.findById(req.params.id);
+
+    if (!booking) {
+      return res.status(404).json({
+        message: "Booking not found"
+      });
+    }
+
+    if (booking.feedback?.given) {
+      return res.status(400).json({
+        message: "Feedback already submitted"
+      });
+    }
+
+    booking.feedback = {
+      rating,
+      comment,
+      given: true
+    };
+
+    await booking.save();
+
+    res.json({
+      message: "Feedback submitted",
+      booking
+    });
+
+  } catch (error) {
+
+    console.error(error);
+
+    res.status(500).json({
+      message: error.message
+    });
+  }
+});
 
 module.exports = router;
