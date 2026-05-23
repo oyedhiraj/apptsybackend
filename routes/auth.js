@@ -89,9 +89,129 @@ router.post('/login', async (req, res) => {
 });
 
 /* GET VENDORS */
+// router.get('/vendors', async (req, res) => {
+//   const vendors = await User.find({ role: 'vendor' });
+//   res.json(vendors);
+// });
+
 router.get('/vendors', async (req, res) => {
-  const vendors = await User.find({ role: 'vendor' });
-  res.json(vendors);
+
+  try {
+
+    const vendors = await User.aggregate([
+
+      /* ONLY VENDORS */
+
+      {
+        $match: {
+          role: 'vendor'
+        }
+      },
+
+      /* GET BOOKINGS */
+
+      {
+        $lookup: {
+
+          from: 'bookings',
+
+          localField: '_id',
+
+          foreignField: 'vendorId',
+
+          as: 'bookings'
+        }
+      },
+
+      /* FILTER FEEDBACK BOOKINGS */
+
+      {
+        $addFields: {
+
+          feedbacks: {
+
+            $filter: {
+
+              input: '$bookings',
+
+              as: 'booking',
+
+              cond: {
+
+                $gt: [
+                  '$$booking.feedback.rating',
+                  0
+                ]
+              }
+            }
+          }
+        }
+      },
+
+      /* CALCULATE RATING */
+
+      {
+        $addFields: {
+
+          totalRatings: {
+
+            $size: '$feedbacks'
+          },
+
+          averageRating: {
+
+            $cond: [
+
+              {
+                $gt: [
+                  { $size: '$feedbacks' },
+                  0
+                ]
+              },
+
+              {
+
+                $round: [
+
+                  {
+                    $avg:
+                      '$feedbacks.feedback.rating'
+                  },
+
+                  1
+                ]
+              },
+
+              0
+            ]
+          }
+        }
+      },
+
+      /* REMOVE BOOKINGS ARRAY */
+
+      {
+        $project: {
+
+          bookings: 0,
+
+          feedbacks: 0
+        }
+      }
+
+    ]);
+
+    res.json(vendors);
+
+  } catch (err) {
+
+    console.log(err);
+
+    res.status(500).json({
+
+      message: 'Server Error'
+    });
+  }
 });
 
 //Reset Password
